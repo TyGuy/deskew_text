@@ -3,7 +3,6 @@
 
 static const l_int32 DEFAULT_BINARY_THRESHOLD = 130;
 
-
 double getMean(double *data, int size) {
   double sum = 0.0;
 
@@ -71,13 +70,10 @@ int main(int argc, char *argv[]) {
   l_int32 status = pixOtsuAdaptiveThreshold(image, 2000, 2000, 0, 0, 0.0f, NULL, &otsuImage);
   Pix *binImage = pixConvertTo1(otsuImage, DEFAULT_BINARY_THRESHOLD);
   Pix *scaleImage = pixScale(binImage, 0.2, 0.2);
-  // const char * outfile0 = (infileBase + "_leptbin.png").c_str();
-  // pixWrite(outfile0, binImage, IFF_PNG);
 
   // Brute force, rotate and check variance from -45 deg to 45 deg
   l_float32 deg2rad = deg2rad = 3.1415926535 / 180.;
   double angle = 0;
-  double maxVariance = -1.0;
   double min = -45;
   double max = 45;
   double accuracy = 1; // Fine tune the final angle accuracy
@@ -105,27 +101,13 @@ int main(int argc, char *argv[]) {
     angle = max - ((max - min) / 2);
   }
 
-  /*
-  // Get every mean in the range
-  for(int i = -45; i < 46; i++) {
-    Pix *rot = pixRotate(binImage, deg2rad * i, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
-
-    double variance = getLinesBitVariance(rot);
-    if (variance > maxVariance) {
-      angle = i;
-      maxVariance = variance;
-    }
-    printf("degrees: %d; variance: %f\n", i, variance);
-    pixDestroy(&rot);
-  }
-  */
-
   // We found the rotation with the most variance
   printf("\n----------------\n");
   printf("Angle: %f\n", angle);
+
+  // TODO: could save this rotation by using the final angle in the variance lookup
   Pix *newImage = pixRotate(binImage, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
 
-  // const char * outfile1 = (infileBase + "_deskew.png").c_str();
   pixWrite(output, newImage, IFF_PNG);
   printf("Output: %s\n", output);
 
@@ -136,41 +118,3 @@ int main(int argc, char *argv[]) {
   pixDestroy(&scaleImage);
   pixDestroy(&newImage);
 }
-
-
-// int main(int argc, char *argv[]) {
-//   l_float32 deg2rad = deg2rad = 3.1415926535 / 180.;
-//   char *outText;
-//   // const char *inputfile = "010001.bin.png";
-//   // const char *inputfile = "IMG_2019.JPG";
-//   std::string infileBase = argv[1];
-//   std::string infile = infileBase + ".png";
-//   const char *inputfile = infile.c_str();
-//   Pix *image = pixRead(inputfile);
-//
-//   l_float32 angle;
-//   l_float32 pconf;
-//
-//   // Find skew and deskew
-//   // Pix *newImage = pixFindSkewAndDeskew(image, 0, &angle, &pconf);
-//
-//   // Find skew angle
-//   Pix *binImage = pixConvertTo1(image, DEFAULT_BINARY_THRESHOLD);
-//   const char * outfile0 = (infileBase + "_leptbin.png").c_str();
-//   pixWrite(outfile0, binImage, IFF_PNG);
-//   pixFindSkew(binImage, &angle, &pconf);
-//   double variance = getLinesBitVariance(binImage);
-//   printf("variance: %f\n", variance);
-//   Pix *newImage = pixRotate(binImage, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
-//
-//   printf("angle: %f\n", angle);
-//   printf("confidence: %f\n", pconf);
-//
-//   const char * outfile1 = (infileBase + "_deskew.png").c_str();
-//   pixWrite(outfile1, newImage, IFF_PNG);
-//
-//   // destroy stuff
-//   pixDestroy(&image);
-//   pixDestroy(&newImage);
-//   pixDestroy(&binImage);
-// }
