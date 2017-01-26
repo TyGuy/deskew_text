@@ -70,8 +70,10 @@ int main(int argc, char *argv[]) {
   // Pix *newImage = pixFindSkewAndDeskew(image, 0, &pangle, &pconf);
 
   // Find skew angle
-  // Pix *otsuImage = pixOtsuAdaptiveThreshold(image, 20, 20, 0, 0, 0.1, NULL, NULL);
-  Pix *binImage = pixConvertTo1(image, DEFAULT_BINARY_THRESHOLD);
+  Pix *otsuImage = NULL;
+  image = pixConvertRGBToGray(image, 0.0f, 0.0f, 0.0f);
+  l_int32 status = pixOtsuAdaptiveThreshold(image, 2000, 2000, 0, 0, 0.0f, NULL, &otsuImage);
+  Pix *binImage = pixConvertTo1(otsuImage, DEFAULT_BINARY_THRESHOLD);
   const char * outfile0 = (infileBase + "_leptbin.png").c_str();
 
   double maxVariance = -1.0;
@@ -102,7 +104,6 @@ int main(int argc, char *argv[]) {
   pixDestroy(&image);
   pixDestroy(&newImage);
   pixDestroy(&binImage);
-  // pixDestroy(&otsuImage);
 }
 
 
