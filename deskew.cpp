@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
   image = pixConvertRGBToGray(image, 0.0f, 0.0f, 0.0f);
   l_int32 status = pixOtsuAdaptiveThreshold(image, 2000, 2000, 0, 0, 0.0f, NULL, &otsuImage);
   Pix *binImage = pixConvertTo1(otsuImage, DEFAULT_BINARY_THRESHOLD);
+  Pix *scaleImage = pixScale(binImage, 0.2, 0.2);
   // const char * outfile0 = (infileBase + "_leptbin.png").c_str();
   // pixWrite(outfile0, binImage, IFF_PNG);
 
@@ -79,16 +80,16 @@ int main(int argc, char *argv[]) {
   double maxVariance = -1.0;
   double min = -45;
   double max = 45;
-  double accuracy = 1;
+  double accuracy = 1; // Fine tune the final angle accuracy
   while (max > min + accuracy) {
     double minAngle = angle - ((angle - min) / 2);
     double maxAngle = max - ((max - angle ) / 2);
 
-    Pix *rotMin = pixRotate(binImage, deg2rad * minAngle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
+    Pix *rotMin = pixRotate(scaleImage, deg2rad * minAngle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
     double varMin = getLinesBitVariance(rotMin);
     pixDestroy(&rotMin);
 
-    Pix *rotMax = pixRotate(binImage, deg2rad * maxAngle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
+    Pix *rotMax = pixRotate(scaleImage, deg2rad * maxAngle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
     double varMax = getLinesBitVariance(rotMax);
     pixDestroy(&rotMax);
 
@@ -132,6 +133,7 @@ int main(int argc, char *argv[]) {
   pixDestroy(&image);
   pixDestroy(&otsuImage);
   pixDestroy(&binImage);
+  pixDestroy(&scaleImage);
   pixDestroy(&newImage);
 }
 
