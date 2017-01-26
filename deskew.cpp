@@ -2,6 +2,7 @@
 #include <string>
 
 static const l_int32 DEFAULT_BINARY_THRESHOLD = 130;
+static const l_int32 MIN_SEGMENT_HEIGHT = 3;
 
 double getMean(double *data, int size) {
   double sum = 0.0;
@@ -26,30 +27,54 @@ double getVariance(double *data, int size) {
 }
 
 // could use better naming
-double getLinesBitVariance(Pix *image) {
-  l_int32 w, h, d, i, j;
+double getLinesBitVariance(Pix *image, l_int32 w, l_int32 h) {
+  l_int32 i, j;
+  double line_means[h];
+  void **lines;
+  lines = pixGetLinePtrs(image, NULL);
+
+  for (i = 0; i < h; i++) {  /* scan over image */
+    double line_total = 0.0;
+
+    for (j = 0; j < w; j++) {
+      line_total += GET_DATA_BIT(lines[i], j);
+    }
+    line_means[i] = line_total / w;
+  }
+
+  return getVariance(line_means, h);
+}
+
+void printSegments(Pix *image, l_int32 w, l_int32 h) {
+  l_int32 i, j;
   void **lines;
 
   lines = pixGetLinePtrs(image, NULL);
 
-  pixGetDimensions(image, &w, &h, &d);
-  double line_means[h];
+  int top = -1;
 
+  for (i = 0; i < h; i++) {  /* scan over image */
+    int black = 0;
 
-  if (d == 1) {
-    for (i = 0; i < h; i++) {  /* scan over image */
-      double line_total = 0.0;
-
-      for (j = 0; j < w; j++) {
-        line_total += GET_DATA_BIT(lines[i], j);
+    for (j = 0; j < w; j++) {
+      if (GET_DATA_BIT(lines[i], j) > 0) {
+        black = 1;
+        break;
       }
-      line_means[i] = line_total / w;
     }
 
-    return getVariance(line_means, h);
-
-  } else {
-    return -42.0;
+    if (black == 0) {
+      // If we have a segment running, we need to end it
+      if (top >= 0 && i - top >= MIN_SEGMENT_HEIGHT) {
+        printf("\nSegment (top:%d, height:%d)", top, (i - 1) - top);
+        top = -1;
+      }
+    } else {
+      // If we are in white space, start a new segment
+      if (top == -1) {
+        top = i;
+      }
+    }
   }
 }
 
@@ -69,7 +94,11 @@ int main(int argc, char *argv[]) {
   image = pixConvertRGBToGray(image, 0.0f, 0.0f, 0.0f);
   l_int32 status = pixOtsuAdaptiveThreshold(image, 2000, 2000, 0, 0, 0.0f, NULL, &otsuImage);
   Pix *binImage = pixConvertTo1(otsuImage, DEFAULT_BINARY_THRESHOLD);
+  // TODO: add in a connected component analysis to despeckle/denoise before this step
   Pix *scaleImage = pixScale(binImage, 0.2, 0.2);
+
+  l_int32 w, h, d;
+  pixGetDimensions(scaleImage, &w, &h, &d);
 
   // Brute force, rotate and check variance from -45 deg to 45 deg
   l_float32 deg2rad = deg2rad = 3.1415926535 / 180.;
@@ -82,11 +111,11 @@ int main(int argc, char *argv[]) {
     double maxAngle = max - ((max - angle ) / 2);
 
     Pix *rotMin = pixRotate(scaleImage, deg2rad * minAngle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
-    double varMin = getLinesBitVariance(rotMin);
+    double varMin = getLinesBitVariance(rotMin, w, h);
     pixDestroy(&rotMin);
 
     Pix *rotMax = pixRotate(scaleImage, deg2rad * maxAngle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
-    double varMax = getLinesBitVariance(rotMax);
+    double varMax = getLinesBitVariance(rotMax, w, h);
     pixDestroy(&rotMax);
 
     if (varMin > varMax) {
@@ -107,9 +136,12 @@ int main(int argc, char *argv[]) {
 
   // TODO: could save this rotation by using the final angle in the variance lookup
   Pix *newImage = pixRotate(binImage, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
+  pixGetDimensions(newImage, &w, &h, &d);
+  // TODO: could run a gaussian filter before this step
+  printSegments(newImage, w, h);
 
   pixWrite(output, newImage, IFF_PNG);
-  printf("Output: %s\n", output);
+  printf("\nOutput: %s\n", output);
 
   // destroy stuff
   pixDestroy(&image);
