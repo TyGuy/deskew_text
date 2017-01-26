@@ -3,3 +3,6 @@ tags
 *.png
 *.JPG
 !sample_image.png
+
+deskew
+*.o

@@ -9,6 +9,7 @@ git clone git@github.com:TyGuy/deskew_text.git
 
 ## Usage:
 ```bash
+make clean && make
 # ./deskew <filename_base>
 # NOTE: .png file extension is assumed, don't add it
 ./deskew sample_image
