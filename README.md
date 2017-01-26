@@ -19,6 +19,7 @@ real simple, just edit files, run make, then the executable.
 
 ## TODO:
 Make usage easier:
+
 * don't assume png, make it so you pass in full file name, and just ensure it's a raster image.
 * print more helpful text
 * let user customize it more (right now skew angle assumed between -45 and 45 degrees)
