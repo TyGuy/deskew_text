@@ -1,5 +1,6 @@
-#include <leptonica/allheaders.h>
+#include <stdio.h>
 #include <string>
+#include <leptonica/allheaders.h>
 
 static const l_int32 DEFAULT_BINARY_THRESHOLD = 130;
 static const l_int32 MIN_SEGMENT_HEIGHT = 3;
@@ -45,8 +46,8 @@ double getLinesBitVariance(Pix *image, l_int32 w, l_int32 h) {
   return getVariance(line_means, h);
 }
 
-void printSegments(Pix *image, l_int32 w, l_int32 h) {
-  l_int32 i, j;
+void printSegments(Pix *image, const char * output, l_int32 w, l_int32 h) {
+  l_int32 i, j, count = 0;
   void **lines;
 
   lines = pixGetLinePtrs(image, NULL);
@@ -66,8 +67,21 @@ void printSegments(Pix *image, l_int32 w, l_int32 h) {
     if (black == 0) {
       // If we have a segment running, we need to end it
       if (top >= 0 && i - top >= MIN_SEGMENT_HEIGHT) {
+        count += 1;
         printf("\nSegment (top:%d, height:%d)", top, (i - 1) - top);
+
+        // change extension
+        std::string segment = output;
+        size_t lastindex = segment.find_last_of(".");
+        std::string baseName = segment.substr(0, lastindex);
+        std::string segFileName = baseName + "-" + std::to_string(count) + ".png";
+        Box *cropBox = boxCreate(0, top, w, (i - 1) - top);
+        Pix *cropImage = pixClipRectangle(image, cropBox, NULL);
+        pixWrite(segFileName.c_str(), cropImage, IFF_PNG);
+        boxDestroy(&cropBox);
+        pixDestroy(&cropImage);
         top = -1;
+
       }
     } else {
       // If we are in white space, start a new segment
@@ -138,7 +152,7 @@ int main(int argc, char *argv[]) {
   Pix *newImage = pixRotate(binImage, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, 0, 0);
   pixGetDimensions(newImage, &w, &h, &d);
   // TODO: could run a gaussian filter before this step
-  printSegments(newImage, w, h);
+  printSegments(newImage, output, w, h);
 
   pixWrite(output, newImage, IFF_PNG);
   printf("\nOutput: %s\n", output);
